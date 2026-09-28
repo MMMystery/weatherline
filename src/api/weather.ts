@@ -12,8 +12,12 @@ async function getJson(url: URL, signal?: AbortSignal): Promise<unknown> {
     throw new Error('网络连接失败，请检查网络后重试。', { cause: error })
   }
 
-  if (!response.ok) throw new Error(`天气服务暂时不可用（${response.status}），请稍后重试。`)
-  return response.json()
+  if (!response.ok) throw new Error(`服务暂时不可用（${response.status}），请稍后重试。`)
+  try {
+    return await response.json()
+  } catch (error) {
+    throw new Error('服务返回的数据无法读取，请稍后重试。', { cause: error })
+  }
 }
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
@@ -27,7 +31,9 @@ export async function searchLocations(query: string, signal?: AbortSignal): Prom
   url.search = new URLSearchParams({ name: query.trim(), count: '6', language: 'zh', format: 'json' }).toString()
   const data = await getJson(url, signal)
   if (!isRecord(data)) throw new Error('地点搜索结果无法读取，请重试。')
-  if (!Array.isArray(data.results)) return []
+  if (data.error === true) throw new Error('地点搜索暂时不可用，请稍后重试。')
+  if (data.results === undefined) return []
+  if (!Array.isArray(data.results)) throw new Error('地点搜索结果无法读取，请重试。')
 
   return data.results.filter((item): item is Location =>
     isRecord(item) && isNumber(item.id) && typeof item.name === 'string' &&

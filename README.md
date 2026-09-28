@@ -29,7 +29,7 @@ npm run preview
 | 命令 | 用途 |
 | --- | --- |
 | `npm run lint` | ESLint 静态检查 |
-| `npm test` | 运行天气条件、单位换算与日期显示测试 |
+| `npm test` | 运行 API 异常处理、天气条件、单位换算与日期显示测试 |
 | `npm run build` | TypeScript 检查并生成 `dist/` |
 
 ## 功能

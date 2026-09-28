@@ -25,6 +25,7 @@ function App() {
   const [weather, setWeather] = useState<Weather | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [errorKind, setErrorKind] = useState<'weather' | 'location'>('weather')
   const [reload, setReload] = useState(0)
   const [locating, setLocating] = useState(false)
   const [unit, setUnit] = useState<'C' | 'F'>('C')
@@ -33,7 +34,7 @@ function App() {
     const controller = new AbortController()
     getWeather(location, controller.signal)
       .then((data) => { if (!controller.signal.aborted) { setWeather(data); setError(''); setLoading(false) } })
-      .catch((caught) => { if (!controller.signal.aborted) { setError(caught instanceof Error ? caught.message : '天气加载失败，请重试。'); setLoading(false) } })
+      .catch((caught) => { if (!controller.signal.aborted) { setErrorKind('weather'); setError(caught instanceof Error ? caught.message : '天气加载失败，请重试。'); setLoading(false) } })
     return () => controller.abort()
   }, [location, reload])
 
@@ -48,7 +49,7 @@ function App() {
   function retry() { setWeather(null); setLoading(true); setError(''); setReload((count) => count + 1) }
 
   function locate() {
-    if (!navigator.geolocation) { setError('当前浏览器不支持定位，请搜索城市名称。'); return }
+    if (!navigator.geolocation) { setErrorKind('location'); setError('当前浏览器不支持定位，请搜索城市名称。'); return }
     setLocating(true)
     navigator.geolocation.getCurrentPosition(async (position) => {
       const { latitude, longitude } = position.coords
@@ -56,7 +57,7 @@ function App() {
         // Open-Meteo does not offer reverse geocoding. Coordinates remain an honest label.
         selectLocation({ id: Date.now(), name: '当前位置', country: `${latitude.toFixed(2)}°, ${longitude.toFixed(2)}°`, latitude, longitude, timezone: Intl.DateTimeFormat().resolvedOptions().timeZone })
       } finally { setLocating(false) }
-    }, () => { setLocating(false); setError('无法获取位置。请允许定位权限，或搜索城市名称。') }, { timeout: 10000, maximumAge: 300000 })
+    }, () => { setLocating(false); setErrorKind('location'); setError('无法获取位置。请允许定位权限，或搜索城市名称。') }, { timeout: 10000, maximumAge: 300000 })
   }
 
   return (
@@ -80,7 +81,7 @@ function App() {
           </div>
         </div>
 
-        {error && <div className="error-banner" role="alert"><span>{error}</span><button type="button" onClick={retry}>重试 <ArrowRight size={16} /></button></div>}
+        {error && <div className="error-banner" role="alert"><span>{error}</span><button type="button" onClick={errorKind === 'weather' ? retry : () => setError('')}>{errorKind === 'weather' ? '重试' : '关闭'} <ArrowRight size={16} /></button></div>}
 
         {loading && !weather && <div className="loading-panel" role="status"><span className="loading-spinner" /><strong>正在获取 {location.name} 的天气</strong><span>预报马上就来</span></div>}
 

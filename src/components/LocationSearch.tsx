@@ -18,6 +18,7 @@ export function LocationSearch({ onSelect, onLocate, locating }: Props) {
   const [active, setActive] = useState(0)
   const listId = useId()
   const searchVersion = useRef(0)
+  const showPopover = open && (query.trim().length >= 2 || Boolean(error))
 
   useEffect(() => {
     const term = query.trim()
@@ -47,12 +48,14 @@ export function LocationSearch({ onSelect, onLocate, locating }: Props) {
     setQuery('')
     setResults([])
     setOpen(false)
+    setLoading(false)
     setError('')
   }
 
   async function submit() {
     const term = query.trim()
     if (term.length < 2) {
+      setLoading(false)
       setError('请输入至少 2 个字，或使用当前位置。')
       setOpen(true)
       return
@@ -84,9 +87,9 @@ export function LocationSearch({ onSelect, onLocate, locating }: Props) {
         <input
           aria-label="搜索城市或地区"
           aria-autocomplete="list"
-          aria-controls={open ? listId : undefined}
-          aria-expanded={open && query.trim().length >= 2}
-          aria-activedescendant={open && results[active] ? `${listId}-option-${results[active].id}` : undefined}
+          aria-controls={showPopover ? listId : undefined}
+          aria-expanded={showPopover}
+          aria-activedescendant={showPopover && results[active] ? `${listId}-option-${results[active].id}` : undefined}
           role="combobox"
           autoComplete="off"
           placeholder="搜索城市或地区"
@@ -96,9 +99,10 @@ export function LocationSearch({ onSelect, onLocate, locating }: Props) {
             setQuery(event.target.value)
             setResults([])
             setError('')
+            setLoading(event.target.value.trim().length >= 2)
             setOpen(true)
           }}
-          onFocus={() => { if (query.trim().length >= 2) setOpen(true) }}
+          onFocus={() => { if (query.trim().length >= 2 || error) setOpen(true) }}
           onKeyDown={(event) => {
             if (event.key === 'ArrowDown' && results.length) {
               event.preventDefault(); setActive((index) => (index + 1) % results.length)
@@ -109,13 +113,13 @@ export function LocationSearch({ onSelect, onLocate, locating }: Props) {
             } else if (event.key === 'Escape') setOpen(false)
           }}
         />
-        {query && <button className="clear-search" type="button" aria-label="清除搜索" onClick={() => { searchVersion.current += 1; setQuery(''); setResults([]); setOpen(false); setError('') }}><X size={17} /></button>}
+        {query && <button className="clear-search" type="button" aria-label="清除搜索" onClick={() => { searchVersion.current += 1; setQuery(''); setResults([]); setOpen(false); setLoading(false); setError('') }}><X size={17} /></button>}
         <button className="search-submit" type="button" onClick={() => void submit()} aria-label="搜索地点">搜索</button>
       </div>
       <button className="locate-button" type="button" onClick={onLocate} disabled={locating} title="使用当前位置">
         <LocateFixed size={19} aria-hidden="true" /> <span>{locating ? '定位中' : '定位'}</span>
       </button>
-      {open && query.trim().length >= 2 && (
+      {showPopover && (
         <div className="search-popover" id={listId} role="listbox" aria-label="地点搜索结果">
           {loading && <p className="search-message">正在搜索地点…</p>}
           {!loading && error && <p className="search-message error-text" role="alert">{error}</p>}
